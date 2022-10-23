@@ -75,7 +75,8 @@ def get_data(card, save_images=False, save_dir=None):
     try:
         elements = card.find_elements(by=By.XPATH, value='.//div[2]/div[2]//img[contains(@src, "https://pbs.twimg.com/")]')
         for element in elements:
-            image_links.append(element.get_attribute('src'))
+            # image_links.append(element.get_attribute('src'))
+            image_links.append(element.get_attribute('src').replace("360x360", "4096x4096").replace("900x900", "4096x4096").replace("120x120", "4096x4096").replace("240x240", "4096x4096").replace("small", "large"))
     except:
         image_links = []
 
@@ -291,7 +292,7 @@ def keep_scroling(driver, data, writer, tweet_ids, scrolling, tweet_parsed, limi
                     data.append(tweet)
                     last_date = str(tweet[2])
                     print("Tweet made at: " + str(last_date) + " is found.")
-                    writer.writerow(tweet)
+                    # writer.writerow(tweet)
                     tweet_parsed += 1
                     if tweet_parsed >= limit:
                         break
@@ -418,7 +419,25 @@ def check_exists_by_xpath(xpath, driver):
     return True
 
 
-def dowload_images(urls, save_dir):
+import time
+import numpy as np
+import hashlib
+
+def dowload_images(from_account, urls, save_dir):
+    file_paths = []
     for i, url_v in enumerate(urls):
         for j, url in enumerate(url_v):
-            urllib.request.urlretrieve(url, save_dir + '/' + str(i + 1) + '_' + str(j + 1) + ".jpg")
+            if "4096x4096" not in url and "large" not in url:
+                print(url)
+            hash = hashlib.md5(url.encode('utf-8')).hexdigest()
+            relative_file_path = f"/{from_account}/{from_account}_{hash}.jpg"
+            os.makedirs(save_dir + f"/{from_account}", exist_ok=True)
+            try:
+                urllib.request.urlretrieve(url, save_dir + relative_file_path)
+            except:
+                print("ignoring error")
+            else:
+                file_paths.append(relative_file_path)
+            time.sleep(np.random.sample() * 0.5)
+
+    return file_paths

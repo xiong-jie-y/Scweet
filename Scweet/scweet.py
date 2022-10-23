@@ -13,7 +13,7 @@ from .utils import init_driver, get_last_date_from_csv, log_search_page, keep_sc
 def scrape(since, until=None, words=None, to_account=None, from_account=None, mention_account=None, interval=5, lang=None,
           headless=True, limit=float("inf"), display_type="Top", resume=False, proxy=None, hashtag=None, 
           show_images=False, save_images=False, save_dir="outputs", filter_replies=False, proximity=False, 
-          geocode=None, minreplies=None, minlikes=None, minretweets=None):
+          geocode=None, minreplies=None, minlikes=None, minretweets=None, save_images_dir="images"):
     """
     scrape data from twitter using requests, starting from <since> until <until>. The program make a search between each <since> and <until_local>
     until it reaches the <until> date if it's given, else it stops at the actual date.
@@ -41,6 +41,7 @@ def scrape(since, until=None, words=None, to_account=None, from_account=None, me
         until = datetime.date.today().strftime("%Y-%m-%d")
     # set refresh at 0. we refresh the page for each <interval> of time.
     refresh = 0
+    next_data = 0
 
     # ------------------------- settings :
     # file path
@@ -125,17 +126,27 @@ def scrape(since, until=None, words=None, to_account=None, from_account=None, me
             else:
                 until_local = until_local + datetime.timedelta(days=interval)
 
+            for i in range(next_data, len(data)):
+                tweet = data[i]
+                if save_images==True:
+                    # import IPython; IPython.embed()
+                    file_paths = dowload_images(from_account, [tweet[9]], save_images_dir)
+                    data[i] = tuple(list(tweet) + [file_paths])
+
+                writer.writerow(data[i])
+            
+            next_data = i + 1
+
     data = pd.DataFrame(data, columns = ['UserScreenName', 'UserName', 'Timestamp', 'Text', 'Embedded_text', 'Emojis', 
-                              'Comments', 'Likes', 'Retweets','Image link', 'Tweet URL'])
+                              'Comments', 'Likes', 'Retweets','Image link', 'Tweet URL', "Image paths"])
 
-    # save images
-    if save_images==True:
-        print("Saving images ...")
-        save_images_dir = "images"
-        if not os.path.exists(save_images_dir):
-            os.makedirs(save_images_dir)
+    # # save images
+    # if save_images==True:
+    #     print("Saving images ...")
+    #     if not os.path.exists(save_images_dir):
+    #         os.makedirs(save_images_dir)
 
-        dowload_images(data["Image link"], save_images_dir)
+    #     dowload_images(from_account, data["Image link"], save_images_dir)
 
     # close the web driver
     driver.close()
